@@ -1,7 +1,6 @@
 {
   "name": "audiocut",
   "version": "1.0.0",
-  "description": "Audio cutting tool",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
