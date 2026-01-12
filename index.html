@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Slicer Pro | Smart AI Cut</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #000000;
+            --card: #0f0f0f;
+            --border: #1f1f1f;
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --text: #fff;
+            --text-muted: #94a3b8;
+            --glow: rgba(16, 185, 129, 0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(ellipse at top, #0a1f1c 0%, #000 50%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 50%, var(--glow) 0%, transparent 50%);
+            animation: pulse 15s ease-in-out infinite;
+            opacity: 0.3;
+            z-index: 0;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.5; }
+        }
+
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .slicer-card {
+            background: rgba(15, 15, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 40px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slicer-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0.5;
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            margin-bottom: 10px;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            flex: 1;
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        .drop-zone {
+            border: 3px dashed rgba(255,255,255,0.1);
+            border-radius: 20px;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.02);
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--glow) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--primary);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .drop-zone:hover::before {
+            opacity: 1;
+        }
+
+        .drop-zone.active {
+            border-color: var(--primary);
+            background: rgba(16, 185, 129, 0.1);
+            box-shadow: 0 0 40px var(--glow);
+        }
+
+        .drop-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: var(--text-muted);
+            transition: 0.3s;
+        }
+
+        .drop-zone:hover .drop-icon {
+            color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .drop-text {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .drop-subtext {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .file-info {
+            display: none;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .file-info.show {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .file-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .file-details h4 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+
+        .file-details p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .control-group {
+            margin-bottom: 35px;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .control-value {
+            color: var(--primary);
+            font-family: monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 4px 12px;
+            border-radius: 8px;
+        }
+
+        .control-description {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        input[type=range] {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            -webkit-appearance: none;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            background: var(--primary);
+            border-radius: 50%;
+            border: 3px solid #000;
+            box-shadow: 0 0 0 2px var(--primary), 0 4px 15px var(--glow);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 3px var(--primary), 0 6px 20px var(--glow);
+        }
+
+        .slice-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 4px 20px var(--glow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slice-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .slice-btn:hover::before {
+            transform: translateX(100%);
+        }
+
+        .slice-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px var(--glow);
+        }
+
+        .slice-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .slice-btn .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .slice-btn.processing .spinner {
+            display: block;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        .waveform-panel {
+            background: rgba(15, 15, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 40px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .waveform-header {
+            margin-bottom: 30px;
+        }
+
+        .waveform-header h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .waveform-header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .waveform-viz {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            min-height: 300px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .player-container {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .player-container.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        audio {
+            width: 100%;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            height: 50px;
+        }
+
+        .download-btn {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .download-btn:hover {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .history-section {
+            margin-top: 30px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .history-header h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .clear-history {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .clear-history:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .history-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: 0.3s;
+        }
+
+        .history-item:hover {
+            background: rgba(16, 185, 129, 0.05);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .history-item-info h5 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #fff;
+        }
+
+        .history-item-details {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .history-item-saved {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .history-item-saved-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .history-item-saved-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .history-empty {
+            text-align: center;
+            color: #666;
+            padding: 30px;
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="slicer-card">
+        <div class="header">
+            <h1>🔪 Audio Slicer Pro</h1>
+            <p class="subtitle">Elimină automat pauzele și spațiile goale din audio.</p>
+
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-value" id="filesProcessed">0</div>
+                    <div class="stat-label">Processed</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="timeSaved">0s</div>
+                    <div class="stat-label">Time Saved</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-icon">🎵</div>
+            <div class="drop-text">Drop your audio file here</div>
+            <div class="drop-subtext">or click to browse • MP3, WAV, M4A supported</div>
+            <input type="file" id="fileInput" style="display:none" accept="audio/*">
+        </div>
+
+        <div class="file-info" id="fileInfo">
+            <div class="file-icon">📁</div>
+            <div class="file-details">
+                <h4 id="fileName">audio.mp3</h4>
+                <p id="fileSize">2.5 MB</p>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span class="control-label">Tightness</span>
+                <span class="control-value" id="tightVal">0.20s</span>
+            </div>
+            <div class="control-description">
+                Cât spațiu lăsăm între cuvinte? Mai mic = Mai rapid și agresiv.
+            </div>
+            <input type="range" id="tightness" min="0.05" max="1.0" step="0.05" value="0.2">
+        </div>
+
+        <div class="control-group">
+            <div class="control-header">
+                <span class="control-label">Sensitivity</span>
+                <span class="control-value" id="sensVal">-30dB</span>
+            </div>
+            <div class="control-description">
+                Ce nivel considerăm liniște? Mai mic = Detectează și sunetele slabe.
+            </div>
+            <input type="range" id="sensitivity" min="-60" max="-10" step="5" value="-30">
+        </div>
+
+        <button class="slice-btn" id="processBtn">
+            <span class="spinner"></span>
+            <span id="btnText">Process Audio</span>
+        </button>
+    </div>
+
+    <div class="waveform-panel">
+        <div class="waveform-header">
+            <h3>Audio Preview</h3>
+            <p>Waveform visualization & playback</p>
+        </div>
+
+        <div class="waveform-viz" id="waveformArea">
+            <div class="empty-state">
+                <i class="fa-solid fa-waveform-lines"></i>
+                <p>Upload an audio file to see the waveform</p>
+            </div>
+        </div>
+
+        <div class="player-container" id="resultArea">
+            <audio id="audioPlayer" controls></audio>
+            <button class="download-btn" id="downloadBtn">
+                <i class="fa-solid fa-download"></i>
+                Download Clean Audio
+            </button>
+        </div>
+
+        <div class="history-section">
+            <div class="history-header">
+                <h4>📜 Processing History</h4>
+                <button class="clear-history" id="clearHistoryBtn">Clear All</button>
+            </div>
+            <div id="historyList"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SERVER_URL = 'http://localhost:3000/api/smart-cut';
+    let selectedFile = null;
+    let processedCount = parseInt(localStorage.getItem('processedCount') || '0');
+    let totalTimeSaved = parseInt(localStorage.getItem('totalTimeSaved') || '0');
+    let history = JSON.parse(localStorage.getItem('processingHistory') || '[]');
+    let originalAudioDuration = 0;
+
+    document.getElementById('filesProcessed').textContent = processedCount;
+    document.getElementById('timeSaved').textContent = totalTimeSaved + 's';
+
+    renderHistory();
+
+    document.getElementById('tightness').addEventListener('input', (e) => {
+        document.getElementById('tightVal').textContent = e.target.value + 's';
+    });
+
+    document.getElementById('sensitivity').addEventListener('input', (e) => {
+        document.getElementById('sensVal').textContent = e.target.value + 'dB';
+    });
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('active');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('active');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('active');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('audio/')) {
+            handleFile(file);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) handleFile(file);
+    });
+
+    function handleFile(file) {
+        selectedFile = file;
+        const fileInfo = document.getElementById('fileInfo');
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        fileInfo.classList.add('show');
+
+        const audio = new Audio();
+        audio.src = URL.createObjectURL(file);
+        audio.addEventListener('loadedmetadata', () => {
+            originalAudioDuration = audio.duration;
+            document.getElementById('waveformArea').innerHTML = `
+                <div style="text-align:center; color: var(--primary);">
+                    <i class="fa-solid fa-circle-check" style="font-size:3rem; margin-bottom:15px;"></i>
+                    <p style="font-size:1.1rem; font-weight:600;">Audio Loaded</p>
+                    <p style="font-size:0.9rem; color: var(--text-muted); margin-top:8px;">${file.name}</p>
+                    <p style="font-size:0.85rem; color: var(--text-muted); margin-top:4px;">Duration: ${formatDuration(originalAudioDuration)}</p>
+                </div>
+            `;
+        });
+    }
+
+    function formatDuration(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    async function processAudio() {
+        if (!selectedFile) {
+            alert("Încarcă un fișier audio mai întâi!");
+            return;
+        }
+
+        if (!originalAudioDuration) {
+            alert("Așteaptă să se încarce complet fișierul audio!");
+            return;
+        }
+
+        const btn = document.getElementById('processBtn');
+        const btnText = document.getElementById('btnText');
+        const player = document.getElementById('resultArea');
+
+        btn.disabled = true;
+        btn.classList.add('processing');
+        btnText.textContent = "Processing...";
+        player.classList.remove('show');
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('minSilence', document.getElementById('tightness').value);
+        formData.append('threshold', document.getElementById('sensitivity').value + 'dB');
+
+        try {
+            const res = await fetch(SERVER_URL, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!res.ok) throw new Error("Eroare la procesare");
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+
+            const audio = document.getElementById('audioPlayer');
+            audio.src = url;
+
+            audio.addEventListener('loadedmetadata', () => {
+                const processedDuration = audio.duration;
+                const timeSavedSeconds = Math.round(originalAudioDuration - processedDuration);
+
+                processedCount++;
+                totalTimeSaved += timeSavedSeconds;
+
+                localStorage.setItem('processedCount', processedCount);
+                localStorage.setItem('totalTimeSaved', totalTimeSaved);
+
+                document.getElementById('filesProcessed').textContent = processedCount;
+                document.getElementById('timeSaved').textContent = totalTimeSaved + 's';
+
+                const historyItem = {
+                    id: Date.now(),
+                    fileName: selectedFile.name,
+                    originalDuration: originalAudioDuration,
+                    processedDuration: processedDuration,
+                    timeSaved: timeSavedSeconds,
+                    timestamp: new Date().toISOString(),
+                    settings: {
+                        tightness: document.getElementById('tightness').value,
+                        sensitivity: document.getElementById('sensitivity').value
+                    }
+                };
+
+                history.unshift(historyItem);
+                if (history.length > 50) history = history.slice(0, 50);
+                localStorage.setItem('processingHistory', JSON.stringify(history));
+                renderHistory();
+            }, { once: true });
+
+            document.getElementById('downloadBtn').onclick = () => {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'clean_' + selectedFile.name;
+                a.click();
+            };
+
+            player.classList.add('show');
+
+        } catch (e) {
+            alert("Eroare: " + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.classList.remove('processing');
+            btnText.textContent = "Process Audio";
+        }
+    }
+
+    function renderHistory() {
+        const historyList = document.getElementById('historyList');
+
+        if (history.length === 0) {
+            historyList.innerHTML = `
+                <div class="history-empty">
+                    <i class="fa-solid fa-clock-rotate-left" style="font-size:2rem; opacity:0.3; margin-bottom:10px;"></i>
+                    <p>No processing history yet</p>
+                </div>
+            `;
+            return;
+        }
+
+        historyList.innerHTML = history.map(item => {
+            const date = new Date(item.timestamp);
+            const timeAgo = getTimeAgo(date);
+
+            return `
+                <div class="history-item">
+                    <div class="history-item-info">
+                        <h5>🎵 ${item.fileName}</h5>
+                        <div class="history-item-details">
+                            <span>⏱️ ${formatDuration(item.originalDuration)} → ${formatDuration(item.processedDuration)}</span>
+                            <span>⚙️ T:${item.settings.tightness}s S:${item.settings.sensitivity}dB</span>
+                            <span>📅 ${timeAgo}</span>
+                        </div>
+                    </div>
+                    <div class="history-item-saved">
+                        <div class="history-item-saved-value">${item.timeSaved}s</div>
+                        <div class="history-item-saved-label">Saved</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+
+        if (seconds < 60) return 'Just now';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+        return `${Math.floor(seconds / 86400)}d ago`;
+    }
+
+    document.getElementById('processBtn').addEventListener('click', processAudio);
+
+    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all history?')) {
+            history = [];
+            localStorage.setItem('processingHistory', JSON.stringify(history));
+            renderHistory();
+        }
+    });
+</script>
+
+</body>
+</html>
