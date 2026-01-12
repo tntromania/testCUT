@@ -9,19 +9,17 @@ const app = express();
 const PORT = 3000;
 
 app.use(cors());
-
-// --- MODIFICARE CRITICĂ PENTRU LINUX ---
-// Nu mai setăm path manual către .exe, Nixpacks îl instalează global
-// ffmpeg.setFfmpegPath(...) <- Șterge sau comentează liniile astea
+app.use(express.json());
 
 // Upload & Folders
 const upload = multer({ dest: 'uploads/' });
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 if (!fs.existsSync('processed')) fs.mkdirSync('processed');
 
-// Servim Frontend-ul Static
+// Servim fișierele statice DIRECT (fără prefix, Traefik îl strip-uiește)
 app.use(express.static(path.join(__dirname, 'public')));
 
+// API endpoint pentru procesare audio
 app.post('/api/smart-cut', upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Fisier lipsa' });
 
@@ -38,20 +36,26 @@ app.post('/api/smart-cut', upload.single('file'), (req, res) => {
             res.download(outputFile, 'tight_audio.mp3', (err) => {
                 try {
                     fs.unlinkSync(inputFile);
-                    setTimeout(() => { if(fs.existsSync(outputFile)) fs.unlinkSync(outputFile); }, 10000);
-                } catch(e){}
+                    setTimeout(() => { 
+                        if(fs.existsSync(outputFile)) fs.unlinkSync(outputFile); 
+                    }, 10000);
+                } catch(e){ console.error(e); }
             });
         })
         .on('error', (err) => {
-            console.error(err);
-            res.status(500).json({ error: 'Eroare procesare.' });
+            console.error('[FFmpeg Error]:', err);
+            res.status(500).json({ error: 'Eroare procesare audio.' });
         })
         .save(outputFile);
 });
 
-// Fallback pentru SPA
+// Fallback pentru toate rutele - trimite index.html
 app.get('*', (req, res) => {
+    console.log(`[REQUEST] ${req.method} ${req.path}`);
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`✂️ AudioCut on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✂️ AudioCut running on port ${PORT}`);
+    console.log(`📁 Static files from: ${path.join(__dirname, 'public')}`);
+});
