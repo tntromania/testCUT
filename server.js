@@ -8,6 +8,9 @@ const fs = require('fs');
 const app = express();
 const PORT = 3000;
 
+// IMPORTANT: Prefix-ul cu care Traefik ne routează
+const BASE_PATH = process.env.BASE_PATH || '';
+
 app.use(cors());
 app.use(express.json());
 
@@ -16,11 +19,11 @@ const upload = multer({ dest: 'uploads/' });
 if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 if (!fs.existsSync('processed')) fs.mkdirSync('processed');
 
-// Servim fișierele statice DIRECT (fără prefix, Traefik îl strip-uiește)
-app.use(express.static(path.join(__dirname, 'public')));
+// Servim fișierele statice (funcționează cu sau fără strip prefix)
+app.use(BASE_PATH, express.static(path.join(__dirname, 'public')));
 
 // API endpoint pentru procesare audio
-app.post('/api/smart-cut', upload.single('file'), (req, res) => {
+app.post(`${BASE_PATH}/api/smart-cut`, upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Fisier lipsa' });
 
     const inputFile = req.file.path;
@@ -29,24 +32,31 @@ app.post('/api/smart-cut', upload.single('file'), (req, res) => {
     const minSilence = req.body.minSilence || '0.3';
 
     console.log(`[CUT] Processing: ${req.file.originalname}`);
+    console.log(`[CUT] Threshold: ${threshold}, Min Silence: ${minSilence}`);
 
     ffmpeg(inputFile)
         .audioFilters(`silenceremove=stop_periods=-1:stop_duration=${minSilence}:stop_threshold=${threshold}`)
         .on('end', () => {
-            res.download(outputFile, 'tight_audio.mp3', (err) => {
+            console.log('[CUT] ✅ Processing complete!');
+            res.download(outputFile, 'audio_cut.mp3', (err) => {
                 try {
                     fs.unlinkSync(inputFile);
                     setTimeout(() => { 
                         if(fs.existsSync(outputFile)) fs.unlinkSync(outputFile); 
                     }, 10000);
-                } catch(e){ console.error(e); }
+                } catch(e){ console.error('[CLEANUP]', e); }
             });
         })
         .on('error', (err) => {
             console.error('[FFmpeg Error]:', err);
-            res.status(500).json({ error: 'Eroare procesare audio.' });
+            res.status(500).json({ error: 'Eroare procesare audio: ' + err.message });
         })
         .save(outputFile);
+});
+
+// Health check
+app.get(`${BASE_PATH}/health`, (req, res) => {
+    res.json({ status: 'ok', basePath: BASE_PATH });
 });
 
 // Fallback pentru toate rutele - trimite index.html
@@ -57,5 +67,6 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✂️ AudioCut running on port ${PORT}`);
-    console.log(`📁 Static files from: ${path.join(__dirname, 'public')}`);
+    console.log(`🔗 Base path: ${BASE_PATH || '(root)'}`);
+    console.log(`📁 Static files: ${path.join(__dirname, 'public')}`);
 });
