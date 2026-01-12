@@ -1,7 +1,7 @@
 {
   "phases": {
     "setup": {
-      "nixPkgs": ["ffmpeg"]
+      "nixPkgs": ["nodejs", "ffmpeg"]
     }
   }
 }
