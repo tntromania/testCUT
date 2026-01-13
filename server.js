@@ -22,6 +22,21 @@ if (!fs.existsSync('processed')) fs.mkdirSync('processed');
 // Servim fișierele statice (funcționează cu sau fără strip prefix)
 app.use(BASE_PATH, express.static(path.join(__dirname, 'public')));
 
+// === REDIRECT pentru capitalizare - ADAUGĂ AICI ===
+// Redirect de la /apps/AudioCut către /apps/audiocut
+app.get(`${BASE_PATH}/apps/AudioCut`, (req, res) => {
+    console.log(`[REDIRECT] Capitalization fix: ${req.path} -> ${BASE_PATH}/apps/audiocut`);
+    res.redirect(`${BASE_PATH}/apps/audiocut`);
+});
+
+// Redirect pentru orice sub-path (ex: /apps/AudioCut/index.html)
+app.get(`${BASE_PATH}/apps/AudioCut/*`, (req, res) => {
+    const restOfPath = req.path.replace('/apps/AudioCut', '/apps/audiocut');
+    const fullPath = `${BASE_PATH}${restOfPath}`;
+    console.log(`[REDIRECT] Capitalization fix: ${req.path} -> ${fullPath}`);
+    res.redirect(fullPath);
+});
+
 // API endpoint pentru procesare audio
 app.post(`${BASE_PATH}/api/smart-cut`, upload.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Fisier lipsa' });
@@ -59,9 +74,34 @@ app.get(`${BASE_PATH}/health`, (req, res) => {
     res.json({ status: 'ok', basePath: BASE_PATH });
 });
 
+// Rute pentru aplicație - trimite index.html
+app.get(`${BASE_PATH}/apps/audiocut`, (req, res) => {
+    console.log(`[REQUEST] Serving index for: ${req.path}`);
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get(`${BASE_PATH}/apps/audiocut/*`, (req, res) => {
+    // Verifică dacă este un fișier static (css, js, etc.)
+    const requestedPath = req.path.replace(`${BASE_PATH}/apps/audiocut`, '');
+    
+    // Dacă are extensie de fișier, trimite fișierul static
+    if (path.extname(requestedPath)) {
+        const filePath = path.join(__dirname, 'public', requestedPath);
+        if (fs.existsSync(filePath)) {
+            res.sendFile(filePath);
+        } else {
+            // Dacă nu există, trimite index.html
+            res.sendFile(path.join(__dirname, 'public', 'index.html'));
+        }
+    } else {
+        // Dacă nu are extensie, trimite index.html
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
+});
+
 // Fallback pentru toate rutele - trimite index.html
 app.get('*', (req, res) => {
-    console.log(`[REQUEST] ${req.method} ${req.path}`);
+    console.log(`[REQUEST] ${req.method} ${req.path} -> fallback`);
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -69,4 +109,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`✂️ AudioCut running on port ${PORT}`);
     console.log(`🔗 Base path: ${BASE_PATH || '(root)'}`);
     console.log(`📁 Static files: ${path.join(__dirname, 'public')}`);
+    console.log(`🔄 Redirect active: /apps/AudioCut -> /apps/audiocut`);
 });
