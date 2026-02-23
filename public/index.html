@@ -1,673 +1,226 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Slicer Pro | Smart AI Cut</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #000000;
-            --card: #0f0f0f;
-            --border: #1f1f1f;
-            --primary: #10b981;
-            --primary-dark: #059669;
-            --text: #fff;
-            --text-muted: #94a3b8;
-            --glow: rgba(16, 185, 129, 0.2);
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: radial-gradient(ellipse at top, #0a1f1c 0%, #000 50%);
-            color: var(--text);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            position: relative;
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at 30% 50%, var(--glow) 0%, transparent 50%);
-            animation: pulse 15s ease-in-out infinite;
-            opacity: 0.3;
-            z-index: 0;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.5; }
-        }
-
-        .container {
-            max-width: 1400px;
-            width: 100%;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .slicer-card {
-            background: rgba(15, 15, 15, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 28px;
-            padding: 40px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .slicer-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--primary), transparent);
-            opacity: 0.5;
-        }
-
-        .header {
-            margin-bottom: 40px;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 8px;
-            letter-spacing: -1px;
-            background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        p.subtitle {
-            color: var(--text-muted);
-            font-size: 1.05rem;
-            margin-bottom: 10px;
-        }
-
-        .stats-row {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .stat-box {
-            flex: 1;
-            background: rgba(16, 185, 129, 0.05);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            border-radius: 12px;
-            padding: 12px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 4px;
-        }
-
-        .drop-zone {
-            border: 3px dashed rgba(255,255,255,0.1);
-            border-radius: 20px;
-            min-height: 180px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: rgba(255,255,255,0.02);
-            margin-bottom: 40px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .drop-zone::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, var(--glow) 0%, transparent 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .drop-zone:hover {
-            border-color: var(--primary);
-            background: rgba(16, 185, 129, 0.05);
-        }
-
-        .drop-zone:hover::before {
-            opacity: 1;
-        }
-
-        .drop-zone.active {
-            border-color: var(--primary);
-            background: rgba(16, 185, 129, 0.1);
-            box-shadow: 0 0 40px var(--glow);
-        }
-
-        .drop-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: var(--text-muted);
-            transition: 0.3s;
-        }
-
-        .drop-zone:hover .drop-icon {
-            color: var(--primary);
-            transform: scale(1.1);
-        }
-
-        .drop-text {
-            font-size: 1.1rem;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .drop-subtext {
-            font-size: 0.85rem;
-            color: #666;
-        }
-
-        .file-info {
-            display: none;
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 12px;
-            padding: 15px;
-            margin-top: 15px;
-        }
-
-        .file-info.show {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .file-icon {
-            width: 50px;
-            height: 50px;
-            background: var(--primary);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        .file-details h4 {
-            font-size: 1rem;
-            margin-bottom: 5px;
-        }
-
-        .file-details p {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        .control-group {
-            margin-bottom: 35px;
-        }
-
-        .control-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .control-label {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #fff;
-        }
-
-        .control-value {
-            color: var(--primary);
-            font-family: monospace;
-            font-size: 1rem;
-            font-weight: 700;
-            background: rgba(16, 185, 129, 0.1);
-            padding: 4px 12px;
-            border-radius: 8px;
-        }
-
-        .control-description {
-            font-size: 0.85rem;
-            color: #666;
-            margin-bottom: 12px;
-            line-height: 1.5;
-        }
-
-        input[type=range] {
-            width: 100%;
-            height: 8px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 4px;
-            -webkit-appearance: none;
-            outline: none;
-            cursor: pointer;
-            position: relative;
-        }
-
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 22px;
-            height: 22px;
-            background: var(--primary);
-            border-radius: 50%;
-            border: 3px solid #000;
-            box-shadow: 0 0 0 2px var(--primary), 0 4px 15px var(--glow);
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        input[type=range]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-            box-shadow: 0 0 0 3px var(--primary), 0 6px 20px var(--glow);
-        }
-
-        .slice-btn {
-            width: 100%;
-            padding: 18px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: #fff;
-            border: none;
-            border-radius: 14px;
-            font-weight: 700;
-            font-size: 1.1rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            box-shadow: 0 4px 20px var(--glow);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .slice-btn::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.2), transparent);
-            transform: translateX(-100%);
-            transition: transform 0.6s ease;
-        }
-
-        .slice-btn:hover::before {
-            transform: translateX(100%);
-        }
-
-        .slice-btn:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 30px var(--glow);
-        }
-
-        .slice-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .slice-btn .spinner {
-            display: none;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        .slice-btn.processing .spinner {
-            display: block;
-        }
-
-        @keyframes spin {
-            100% { transform: rotate(360deg); }
-        }
-
-        .waveform-panel {
-            background: rgba(15, 15, 15, 0.8);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 28px;
-            padding: 40px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .waveform-header {
-            margin-bottom: 30px;
-        }
-
-        .waveform-header h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .waveform-header p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        .waveform-viz {
-            flex: 1;
-            background: rgba(0,0,0,0.3);
-            border-radius: 16px;
-            padding: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 30px;
-            min-height: 300px;
-        }
-
-        .empty-state {
-            text-align: center;
-            color: #666;
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            opacity: 0.3;
-        }
-
-        .player-container {
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .player-container.show {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        audio {
-            width: 100%;
-            margin-bottom: 20px;
-            border-radius: 12px;
-            height: 50px;
-        }
-
-        .download-btn {
-            width: 100%;
-            padding: 15px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            color: #fff;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .download-btn:hover {
-            background: rgba(16, 185, 129, 0.1);
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .history-section {
-            margin-top: 30px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 16px;
-            padding: 20px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .history-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .history-header h4 {
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-
-        .clear-history {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: var(--text-muted);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .clear-history:hover {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: rgba(239, 68, 68, 0.3);
-            color: #ef4444;
-        }
-
-        .history-item {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: 0.3s;
-        }
-
-        .history-item:hover {
-            background: rgba(16, 185, 129, 0.05);
-            border-color: rgba(16, 185, 129, 0.2);
-        }
-
-        .history-item-info h5 {
-            font-size: 0.95rem;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: #fff;
-        }
-
-        .history-item-details {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .history-item-saved {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 8px;
-            padding: 8px 12px;
-            text-align: center;
-            min-width: 80px;
-        }
-
-        .history-item-saved-value {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .history-item-saved-label {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .history-empty {
-            text-align: center;
-            color: #666;
-            padding: 30px;
-        }
-
-        @media (max-width: 1200px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Audio Slicer Pro | Viralio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { viralio: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 900: '#312e81', accent: '#ec4899' } }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F8FAFC; overflow-x: hidden; }
+        .bg-gradient-viralio { background: linear-gradient(135deg, #4f46e5 0%, #ec4899 100%); }
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #f1f5f9; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Custom Audio Sliders */
+        input[type=range] { -webkit-appearance: none; width: 100%; height: 6px; background: #e2e8f0; border-radius: 4px; outline: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #4f46e5; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.4); }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        #login-modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; }
+        #login-modal.show { display: flex; opacity: 1; }
+        .modal-content { background: #ffffff; border-radius: 28px; padding: 40px; text-align: center; max-width: 420px; width: 90%; transform: translateY(20px); transition: 0.4s; }
+        #login-modal.show .modal-content { transform: translateY(0); }
+    </style>
 </head>
-<body>
+<body class="md:p-4">
 
-<div class="container">
-    <div class="slicer-card">
-        <div class="header">
-            <h1>🔪 Audio Slicer Pro</h1>
-            <p class="subtitle">Elimină automat pauzele și spațiile goale din audio.</p>
-
-            <div class="stats-row">
-                <div class="stat-box">
-                    <div class="stat-value" id="filesProcessed">0</div>
-                    <div class="stat-label">Processed</div>
+<div class="bg-white md:rounded-[1.5rem] min-h-screen shadow-xl overflow-hidden relative pb-10 border border-slate-100">
+    
+    <div class="sticky top-0 z-50 flex w-full justify-center px-2 py-4 md:p-2 max-w-screen-2xl mx-auto">
+        <nav class="w-full rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-xl md:mx-12 shadow-sm px-5 md:px-8 py-3 flex justify-between items-center">
+            <a class="flex items-center font-black text-2xl tracking-tight text-slate-900" href="https://creatorsmart.ro">
+                <div class="w-9 h-9 rounded-xl bg-gradient-viralio flex items-center justify-center text-white mr-2.5 shadow-md"><i class="fa-solid fa-bolt"></i></div>
+                Viralio <span class="text-sm font-medium text-slate-400 ml-2 border-l border-slate-200 pl-2">Audio Slicer</span>
+            </a>
+            
+            <div class="flex items-center justify-end space-x-3">
+                <button onclick="openLoginModal()" id="login-top-btn" class="px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-viralio-600 transition-all font-semibold shadow-md text-sm">Conectează-te</button>
+                <div id="user-profile" class="hidden items-center bg-slate-50 border border-slate-200 py-1 pl-1.5 pr-1.5 rounded-full">
+                    <img id="nav-avatar" src="" class="w-8 h-8 rounded-full border border-slate-200">
+                    <div class="flex flex-col leading-none ml-2 mr-2">
+                        <span id="nav-name" class="text-xs font-bold text-slate-900 mb-0.5"></span>
+                        <span class="text-[0.65rem] font-bold text-viralio-600"><span id="nav-credits">0</span> Credite</span>
+                    </div>
+                    <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-500 transition-colors rounded-full hover:bg-red-50"><i class="fa-solid fa-power-off"></i></button>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-value" id="timeSaved">0s</div>
-                    <div class="stat-label">Time Saved</div>
-                </div>
             </div>
-        </div>
-
-        <div class="drop-zone" id="dropZone">
-            <div class="drop-icon">🎵</div>
-            <div class="drop-text">Drop your audio file here</div>
-            <div class="drop-subtext">or click to browse • MP3, WAV, M4A supported</div>
-            <input type="file" id="fileInput" style="display:none" accept="audio/*">
-        </div>
-
-        <div class="file-info" id="fileInfo">
-            <div class="file-icon">📁</div>
-            <div class="file-details">
-                <h4 id="fileName">audio.mp3</h4>
-                <p id="fileSize">2.5 MB</p>
-            </div>
-        </div>
-
-        <div class="control-group">
-            <div class="control-header">
-                <span class="control-label">Tightness</span>
-                <span class="control-value" id="tightVal">0.20s</span>
-            </div>
-            <div class="control-description">
-                Cât spațiu lăsăm între cuvinte? Mai mic = Mai rapid și agresiv.
-            </div>
-            <input type="range" id="tightness" min="0.05" max="1.0" step="0.05" value="0.2">
-        </div>
-
-        <div class="control-group">
-            <div class="control-header">
-                <span class="control-label">Sensitivity</span>
-                <span class="control-value" id="sensVal">-30dB</span>
-            </div>
-            <div class="control-description">
-                Ce nivel considerăm liniște? Mai mic = Detectează și sunetele slabe.
-            </div>
-            <input type="range" id="sensitivity" min="-60" max="-10" step="5" value="-30">
-        </div>
-
-        <button class="slice-btn" id="processBtn">
-            <span class="spinner"></span>
-            <span id="btnText">Process Audio</span>
-        </button>
+        </nav>
     </div>
 
-    <div class="waveform-panel">
-        <div class="waveform-header">
-            <h3>Audio Preview</h3>
-            <p>Waveform visualization & playback</p>
-        </div>
+    <div id="login-modal"><div class="modal-content"><button class="absolute top-4 right-5 text-slate-400 hover:text-slate-900" onclick="closeLoginModal()"><i class="fa-solid fa-xmark text-xl"></i></button><div class="w-16 h-16 rounded-2xl bg-indigo-50 text-viralio-600 flex items-center justify-center text-3xl mx-auto mb-4"><i class="fas fa-fingerprint"></i></div><h2 class="text-2xl font-extrabold mb-2 text-slate-900">Intră în cont</h2><p class="text-slate-500 text-sm mb-6">Conectează-te pentru a procesa audio.</p><div class="flex justify-center bg-slate-50 py-3 rounded-2xl border border-slate-100"><div id="g_id_onload" data-client_id="743541351685-br4h5r61n3ai28bbhm9blt34944rju8p.apps.googleusercontent.com" data-context="signin" data-ux_mode="popup" data-callback="handleCredentialResponse" data-auto_prompt="false"></div><div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large"></div></div></div></div>
 
-        <div class="waveform-viz" id="waveformArea">
-            <div class="empty-state">
-                <i class="fa-solid fa-waveform-lines"></i>
-                <p>Upload an audio file to see the waveform</p>
+    <div class="max-w-7xl mx-auto px-4 md:px-12 mt-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
+        
+        <div class="flex flex-col gap-6">
+            <div class="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="bg-pink-100 text-pink-600 text-xs font-bold px-3 py-1 rounded-md">PRO</span>
+                    <h1 class="text-2xl font-extrabold text-slate-900">Audio Slicer AI</h1>
+                </div>
+                <p class="text-slate-500 font-medium text-sm mb-6">Elimină automat pauzele, respirațiile și spațiile goale din înregistrările tale audio.</p>
+                
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
+                        <div class="text-2xl font-black text-viralio-600" id="filesProcessed">0</div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">Procesate</div>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
+                        <div class="text-2xl font-black text-viralio-600" id="timeSaved">0s</div>
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">Timp Salvat</div>
+                    </div>
+                </div>
+
+                <div id="dropZone" class="border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center cursor-pointer hover:border-viralio-500 hover:bg-indigo-50 transition-all group">
+                    <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 group-hover:bg-viralio-100 group-hover:text-viralio-600 transition-colors"><i class="fa-solid fa-file-audio"></i></div>
+                    <p class="text-lg font-bold text-slate-700 mb-1">Încarcă fișierul audio</p>
+                    <p class="text-sm text-slate-500 font-medium">MP3, WAV, M4A suportate (Trage sau dă click)</p>
+                    <input type="file" id="fileInput" class="hidden" accept="audio/*">
+                </div>
+
+                <div id="fileInfo" class="hidden bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex items-center gap-4 mt-6">
+                    <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-xl text-viralio-600 shadow-sm"><i class="fa-solid fa-music"></i></div>
+                    <div class="flex-1 overflow-hidden">
+                        <p id="fileName" class="font-bold text-slate-900 truncate"></p>
+                        <p id="fileSize" class="text-xs text-slate-500 font-medium"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
+                <h3 class="font-bold text-slate-900 mb-6 flex items-center gap-2"><i class="fa-solid fa-sliders text-slate-400"></i> Setări Algoritm</h3>
+                
+                <div class="mb-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <div>
+                            <label class="font-bold text-slate-700 text-sm">Tightness (Spațiu între cuvinte)</label>
+                            <p class="text-xs text-slate-500">Mai mic = Mai rapid și agresiv</p>
+                        </div>
+                        <span id="tightVal" class="text-viralio-600 font-mono font-bold bg-indigo-50 px-2 py-1 rounded">0.20s</span>
+                    </div>
+                    <input type="range" id="tightness" min="0.05" max="1.0" step="0.05" value="0.2">
+                </div>
+                
+                <div class="mb-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <div>
+                            <label class="font-bold text-slate-700 text-sm">Sensibilitate Liniște</label>
+                            <p class="text-xs text-slate-500">Mai mic = Detectează sunete slabe</p>
+                        </div>
+                        <span id="sensVal" class="text-viralio-600 font-mono font-bold bg-indigo-50 px-2 py-1 rounded">-30dB</span>
+                    </div>
+                    <input type="range" id="sensitivity" min="-60" max="-10" step="5" value="-30">
+                </div>
+
+                <button id="processBtn" class="w-full bg-slate-900 hover:bg-viralio-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg">
+                    <i class="fa-solid fa-scissors"></i> PROCESEAZĂ (1 Credit)
+                </button>
             </div>
         </div>
 
-        <div class="player-container" id="resultArea">
-            <audio id="audioPlayer" controls></audio>
-            <button class="download-btn" id="downloadBtn">
-                <i class="fa-solid fa-download"></i>
-                Download Clean Audio
-            </button>
-        </div>
+        <div class="flex flex-col gap-6">
+            
+            <div class="bg-slate-900 rounded-[2rem] p-8 text-center relative overflow-hidden shadow-2xl flex flex-col justify-center min-h-[350px]">
+                <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                
+                <div id="emptyState" class="relative z-10">
+                    <i class="fa-solid fa-waveform-lines text-6xl text-slate-700 mb-4"></i>
+                    <p class="text-slate-400 font-medium">Așteptăm fișierul audio...</p>
+                </div>
 
-        <div class="history-section">
-            <div class="history-header">
-                <h4>📜 Processing History</h4>
-                <button class="clear-history" id="clearHistoryBtn">Clear All</button>
+                <div id="loader" class="hidden relative z-10">
+                    <div class="w-16 h-16 border-4 border-slate-700 border-t-viralio-500 rounded-full animate-spin mx-auto mb-4"></div>
+                    <p class="font-bold text-white">AI-ul taie pauzele...</p>
+                </div>
+
+                <div id="resultArea" class="hidden relative z-10 w-full space-y-6">
+                    <div class="w-16 h-16 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-check"></i></div>
+                    <h3 class="text-2xl font-bold text-white">Procesare Completă!</h3>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                            <p class="text-slate-400 text-xs uppercase tracking-wider mb-1">Durată Veche</p>
+                            <p id="timeOld" class="text-xl font-mono font-bold text-white">0:00</p>
+                        </div>
+                        <div class="bg-viralio-900/50 rounded-xl p-4 border border-viralio-500/30">
+                            <p class="text-viralio-300 text-xs uppercase tracking-wider mb-1">Durată Nouă</p>
+                            <p id="timeNew" class="text-xl font-mono font-bold text-white">0:00</p>
+                        </div>
+                    </div>
+
+                    <audio id="audioPlayer" controls class="w-full mt-4 h-12 rounded-lg"></audio>
+                    
+                    <button id="downloadBtn" class="w-full bg-white text-slate-900 hover:bg-slate-200 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-4">
+                        <i class="fa-solid fa-download"></i> Descarcă Audio Curat
+                    </button>
+                </div>
             </div>
-            <div id="historyList"></div>
+
+            <div class="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm flex-1 max-h-[450px] flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <h4 class="font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-slate-400"></i> Istoric Procesări</h4>
+                    <button id="clearHistoryBtn" class="text-xs font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors">Curăță Tot</button>
+                </div>
+                <div id="historyList" class="flex-1 overflow-y-auto pr-2 space-y-3"></div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    const SERVER_URL = '/api/smart-cut';
+    // === AUTH LOGIC ===
+    const loginModal = document.getElementById('login-modal');
+    function openLoginModal() { loginModal.classList.add('show'); }
+    function closeLoginModal() { loginModal.classList.remove('show'); }
+    function setToken(token) { document.cookie = "viralio_token=" + token + "; domain=.creatorsmart.ro; path=/; max-age=604800; Secure; SameSite=Lax"; }
+    function getToken() { const match = document.cookie.match(/(?:^|; )viralio_token=([^;]*)/); return match ? match[1] : null; }
+    function removeToken() { document.cookie = "viralio_token=; domain=.creatorsmart.ro; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"; }
+
+    async function handleCredentialResponse(response) {
+        try {
+            const res = await fetch('https://downloader.creatorsmart.ro/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: response.credential }) });
+            const data = await res.json();
+            if(data.token) { setToken(data.token); closeLoginModal(); updateUI(data.user); }
+        } catch (e) { alert('Eroare conexiune.'); }
+    }
+
+    function updateUI(user) {
+        document.getElementById('login-top-btn').classList.add('hidden');
+        const userNav = document.getElementById('user-profile');
+        userNav.classList.remove('hidden'); userNav.classList.add('flex');
+        document.getElementById('nav-name').innerText = user.name.split(' ')[0];
+        document.getElementById('nav-avatar').src = user.picture;
+        document.getElementById('nav-credits').innerText = user.credits;
+    }
+
+    function logout() { removeToken(); location.reload(); }
+
+    window.onload = async () => {
+        const token = getToken();
+        if(token) {
+            try {
+                const res = await fetch('https://downloader.creatorsmart.ro/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
+                if(res.ok) { const data = await res.json(); updateUI(data.user); }
+                else { removeToken(); }
+            } catch (e) {}
+        }
+        renderHistory();
+    };
+
+    // === APP LOGIC (RESTORED 100%) ===
+    const SERVER_URL = '/api/smart-cut'; // AICI RAMANE BACKENDUL TAU
     let selectedFile = null;
     let processedCount = parseInt(localStorage.getItem('processedCount') || '0');
     let totalTimeSaved = parseInt(localStorage.getItem('totalTimeSaved') || '0');
@@ -677,64 +230,37 @@
     document.getElementById('filesProcessed').textContent = processedCount;
     document.getElementById('timeSaved').textContent = totalTimeSaved + 's';
 
-    renderHistory();
-
-    document.getElementById('tightness').addEventListener('input', (e) => {
-        document.getElementById('tightVal').textContent = e.target.value + 's';
-    });
-
-    document.getElementById('sensitivity').addEventListener('input', (e) => {
-        document.getElementById('sensVal').textContent = e.target.value + 'dB';
-    });
+    document.getElementById('tightness').addEventListener('input', (e) => document.getElementById('tightVal').textContent = e.target.value + 's');
+    document.getElementById('sensitivity').addEventListener('input', (e) => document.getElementById('sensVal').textContent = e.target.value + 'dB');
 
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
 
     dropZone.addEventListener('click', () => fileInput.click());
-
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('active');
-    });
-
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('active');
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('active');
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('audio/')) {
-            handleFile(file);
-        }
-    });
-
-    fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) handleFile(file);
-    });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-viralio-500', 'bg-indigo-50'); });
+    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-viralio-500', 'bg-indigo-50'); });
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('border-viralio-500', 'bg-indigo-50'); handleFile(e.dataTransfer.files[0]); });
+    fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
 
     function handleFile(file) {
-        selectedFile = file;
-        const fileInfo = document.getElementById('fileInfo');
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-        fileInfo.classList.add('show');
-
-        const audio = new Audio();
-        audio.src = URL.createObjectURL(file);
-        audio.addEventListener('loadedmetadata', () => {
-            originalAudioDuration = audio.duration;
-            document.getElementById('waveformArea').innerHTML = `
-                <div style="text-align:center; color: var(--primary);">
-                    <i class="fa-solid fa-circle-check" style="font-size:3rem; margin-bottom:15px;"></i>
-                    <p style="font-size:1.1rem; font-weight:600;">Audio Loaded</p>
-                    <p style="font-size:0.9rem; color: var(--text-muted); margin-top:8px;">${file.name}</p>
-                    <p style="font-size:0.85rem; color: var(--text-muted); margin-top:4px;">Duration: ${formatDuration(originalAudioDuration)}</p>
-                </div>
-            `;
-        });
+        if(file && file.type.startsWith('audio/')) {
+            selectedFile = file;
+            document.getElementById('fileInfo').classList.remove('hidden');
+            document.getElementById('fileInfo').classList.add('flex');
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+            
+            const audio = new Audio(URL.createObjectURL(file));
+            audio.addEventListener('loadedmetadata', () => {
+                originalAudioDuration = audio.duration;
+                document.getElementById('timeOld').textContent = formatDuration(originalAudioDuration);
+                document.getElementById('emptyState').innerHTML = `
+                    <i class="fa-solid fa-circle-check text-5xl text-viralio-500 mb-4"></i>
+                    <p class="text-white font-bold text-lg">Fișier Încărcat</p>
+                    <p class="text-slate-400 text-sm mt-1">${formatDuration(originalAudioDuration)}</p>
+                `;
+            });
+        }
     }
 
     function formatDuration(seconds) {
@@ -744,24 +270,15 @@
     }
 
     async function processAudio() {
-        if (!selectedFile) {
-            alert("Încarcă un fișier audio mai întâi!");
-            return;
-        }
-
-        if (!originalAudioDuration) {
-            alert("Așteaptă să se încarce complet fișierul audio!");
-            return;
-        }
+        const token = getToken();
+        if(!token) { openLoginModal(); return; }
+        if (!selectedFile) { alert("Încarcă un fișier audio mai întâi!"); return; }
 
         const btn = document.getElementById('processBtn');
-        const btnText = document.getElementById('btnText');
-        const player = document.getElementById('resultArea');
-
-        btn.disabled = true;
-        btn.classList.add('processing');
-        btnText.textContent = "Processing...";
-        player.classList.remove('show');
+        document.getElementById('emptyState').classList.add('hidden');
+        document.getElementById('resultArea').classList.add('hidden');
+        document.getElementById('loader').classList.remove('hidden');
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROCESEAZĂ...';
 
         const formData = new FormData();
         formData.append('file', selectedFile);
@@ -769,13 +286,14 @@
         formData.append('threshold', document.getElementById('sensitivity').value + 'dB');
 
         try {
+            // AICI ESTE FETCH-UL TĂU ORIGINAL CĂTRE PYTHON BACKEND
             const res = await fetch(SERVER_URL, {
                 method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }, // Daca ai securizat si audio-ul
                 body: formData
             });
 
             if (!res.ok) throw new Error("Eroare la procesare");
-
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
 
@@ -785,29 +303,20 @@
             audio.addEventListener('loadedmetadata', () => {
                 const processedDuration = audio.duration;
                 const timeSavedSeconds = Math.round(originalAudioDuration - processedDuration);
+                document.getElementById('timeNew').textContent = formatDuration(processedDuration);
 
-                processedCount++;
-                totalTimeSaved += timeSavedSeconds;
-
+                processedCount++; totalTimeSaved += timeSavedSeconds;
                 localStorage.setItem('processedCount', processedCount);
                 localStorage.setItem('totalTimeSaved', totalTimeSaved);
-
                 document.getElementById('filesProcessed').textContent = processedCount;
                 document.getElementById('timeSaved').textContent = totalTimeSaved + 's';
 
                 const historyItem = {
-                    id: Date.now(),
-                    fileName: selectedFile.name,
-                    originalDuration: originalAudioDuration,
-                    processedDuration: processedDuration,
-                    timeSaved: timeSavedSeconds,
-                    timestamp: new Date().toISOString(),
-                    settings: {
-                        tightness: document.getElementById('tightness').value,
-                        sensitivity: document.getElementById('sensitivity').value
-                    }
+                    id: Date.now(), fileName: selectedFile.name,
+                    originalDuration: originalAudioDuration, processedDuration: processedDuration,
+                    timeSaved: timeSavedSeconds, timestamp: new Date().toISOString(),
+                    settings: { tightness: document.getElementById('tightness').value, sensitivity: document.getElementById('sensitivity').value }
                 };
-
                 history.unshift(historyItem);
                 if (history.length > 50) history = history.slice(0, 50);
                 localStorage.setItem('processingHistory', JSON.stringify(history));
@@ -815,78 +324,50 @@
             }, { once: true });
 
             document.getElementById('downloadBtn').onclick = () => {
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'clean_' + selectedFile.name;
-                a.click();
+                const a = document.createElement('a'); a.href = url; a.download = 'clean_' + selectedFile.name; a.click();
             };
 
-            player.classList.add('show');
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('resultArea').classList.remove('hidden');
 
         } catch (e) {
             alert("Eroare: " + e.message);
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
         } finally {
-            btn.disabled = false;
-            btn.classList.remove('processing');
-            btnText.textContent = "Process Audio";
+            btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-scissors"></i> PROCESEAZĂ (1 Credit)';
         }
     }
 
     function renderHistory() {
         const historyList = document.getElementById('historyList');
-
         if (history.length === 0) {
-            historyList.innerHTML = `
-                <div class="history-empty">
-                    <i class="fa-solid fa-clock-rotate-left" style="font-size:2rem; opacity:0.3; margin-bottom:10px;"></i>
-                    <p>No processing history yet</p>
-                </div>
-            `;
+            historyList.innerHTML = `<div class="text-center text-slate-400 py-10"><i class="fa-solid fa-box-open text-3xl mb-3 opacity-50"></i><p class="text-sm">Nicio procesare încă.</p></div>`;
             return;
         }
 
         historyList.innerHTML = history.map(item => {
-            const date = new Date(item.timestamp);
-            const timeAgo = getTimeAgo(date);
-
             return `
-                <div class="history-item">
-                    <div class="history-item-info">
-                        <h5>🎵 ${item.fileName}</h5>
-                        <div class="history-item-details">
+                <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 flex justify-between items-center hover:shadow-md transition-shadow">
+                    <div>
+                        <h5 class="text-sm font-bold text-slate-800 truncate max-w-[180px]"><i class="fa-solid fa-music text-viralio-500 mr-1"></i> ${item.fileName}</h5>
+                        <div class="text-xs text-slate-500 font-medium mt-1 flex gap-3">
                             <span>⏱️ ${formatDuration(item.originalDuration)} → ${formatDuration(item.processedDuration)}</span>
-                            <span>⚙️ T:${item.settings.tightness}s S:${item.settings.sensitivity}dB</span>
-                            <span>📅 ${timeAgo}</span>
                         </div>
                     </div>
-                    <div class="history-item-saved">
-                        <div class="history-item-saved-value">${item.timeSaved}s</div>
-                        <div class="history-item-saved-label">Saved</div>
+                    <div class="bg-green-100 border border-green-200 text-green-700 px-3 py-1.5 rounded-lg text-center">
+                        <div class="text-sm font-black">${item.timeSaved}s</div>
+                        <div class="text-[0.6rem] font-bold uppercase">Salvat</div>
                     </div>
                 </div>
             `;
         }).join('');
     }
 
-    function getTimeAgo(date) {
-        const seconds = Math.floor((new Date() - date) / 1000);
-
-        if (seconds < 60) return 'Just now';
-        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-        return `${Math.floor(seconds / 86400)}d ago`;
-    }
-
     document.getElementById('processBtn').addEventListener('click', processAudio);
-
     document.getElementById('clearHistoryBtn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear all history?')) {
-            history = [];
-            localStorage.setItem('processingHistory', JSON.stringify(history));
-            renderHistory();
-        }
+        if (confirm('Ștergi tot istoricul?')) { history = []; localStorage.setItem('processingHistory', JSON.stringify(history)); renderHistory(); }
     });
 </script>
-
 </body>
 </html>
