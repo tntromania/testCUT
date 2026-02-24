@@ -180,26 +180,50 @@
 </div>
 
 <script>
-    // === AUTH LOGIC ===
+    // === AUTH LOGIC UNIVERSAL ===
     const loginModal = document.getElementById('login-modal');
     function openLoginModal() { loginModal.classList.add('show'); }
     function closeLoginModal() { loginModal.classList.remove('show'); }
+
+    // Salveaza cookie pentru TOT domeniul creatorsmart.ro
     function setToken(token) { document.cookie = "viralio_token=" + token + "; domain=.creatorsmart.ro; path=/; max-age=604800; Secure; SameSite=Lax"; }
     function getToken() { const match = document.cookie.match(/(?:^|; )viralio_token=([^;]*)/); return match ? match[1] : null; }
     function removeToken() { document.cookie = "viralio_token=; domain=.creatorsmart.ro; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"; }
 
-    async function handleCredentialResponse(response) {
+    // Trimitem login-ul la propriul server (care e conectat la DB)
+    window.handleCredentialResponse = async function(response) {
         try {
-            const res = await fetch('https://downloader.creatorsmart.ro/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: response.credential }) });
+            const res = await fetch('/api/auth/google', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ credential: response.credential }) 
+            });
             const data = await res.json();
-            if(data.token) { setToken(data.token); closeLoginModal(); updateUI(data.user); }
-        } catch (e) { alert('Eroare conexiune.'); }
+            if(data.token) { 
+                setToken(data.token); 
+                closeLoginModal(); 
+                updateUI(data.user); 
+            } else {
+                alert("Eroare la generarea token-ului.");
+            }
+        } catch (e) { 
+            console.error(e);
+            alert('Eroare conexiune cu serverul.'); 
+        }
     }
 
     function updateUI(user) {
-        document.getElementById('login-top-btn').classList.add('hidden');
+        const btnDesktop = document.getElementById('login-top-btn');
+        const btnMobile = document.getElementById('login-top-btn-mobile');
+        if(btnDesktop) btnDesktop.classList.add('hidden');
+        if(btnMobile) btnMobile.classList.add('hidden');
+
         const userNav = document.getElementById('user-profile');
-        userNav.classList.remove('hidden'); userNav.classList.add('flex');
+        if(userNav) {
+            userNav.classList.remove('hidden'); 
+            userNav.classList.add('flex');
+        }
+        
         document.getElementById('nav-name').innerText = user.name.split(' ')[0];
         document.getElementById('nav-avatar').src = user.picture;
         document.getElementById('nav-credits').innerText = user.credits;
@@ -211,7 +235,7 @@
         const token = getToken();
         if(token) {
             try {
-                const res = await fetch('https://downloader.creatorsmart.ro/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
+                const res = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
                 if(res.ok) { const data = await res.json(); updateUI(data.user); }
                 else { removeToken(); }
             } catch (e) {}
@@ -219,8 +243,8 @@
         renderHistory();
     };
 
-    // === APP LOGIC (RESTORED 100%) ===
-    const SERVER_URL = '/api/smart-cut'; // AICI RAMANE BACKENDUL TAU
+    // === APP LOGIC (AUDIO CUT) ===
+    const SERVER_URL = '/api/smart-cut'; 
     let selectedFile = null;
     let processedCount = parseInt(localStorage.getItem('processedCount') || '0');
     let totalTimeSaved = parseInt(localStorage.getItem('totalTimeSaved') || '0');
@@ -286,19 +310,22 @@
         formData.append('threshold', document.getElementById('sensitivity').value + 'dB');
 
         try {
-            // AICI ESTE FETCH-UL TĂU ORIGINAL CĂTRE PYTHON BACKEND
             const res = await fetch(SERVER_URL, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }, // Daca ai securizat si audio-ul
+                headers: { 'Authorization': `Bearer ${token}` }, // Token-ul pleaca catre server
                 body: formData
             });
 
-            if (!res.ok) throw new Error("Eroare la procesare");
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Eroare la procesare server.");
 
+            // Acum preluam link-ul generat si updatam creditele in Navbar
             const audio = document.getElementById('audioPlayer');
-            audio.src = url;
+            audio.src = data.downloadUrl;
+            
+            if(document.getElementById('nav-credits')) {
+                document.getElementById('nav-credits').innerText = data.creditsLeft;
+            }
 
             audio.addEventListener('loadedmetadata', () => {
                 const processedDuration = audio.duration;
@@ -323,8 +350,12 @@
                 renderHistory();
             }, { once: true });
 
+            // Butonul de Download ia link-ul de la server
             document.getElementById('downloadBtn').onclick = () => {
-                const a = document.createElement('a'); a.href = url; a.download = 'clean_' + selectedFile.name; a.click();
+                const a = document.createElement('a'); 
+                a.href = data.downloadUrl; 
+                a.download = 'viralio_cut_' + selectedFile.name; 
+                a.click();
             };
 
             document.getElementById('loader').classList.add('hidden');
