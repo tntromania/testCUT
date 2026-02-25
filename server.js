@@ -31,7 +31,7 @@ mongoose.connect(process.env.MONGO_URI)
     .catch(err => console.error('❌ Eroare MongoDB:', err));
 
 const UserSchema = new mongoose.Schema({
-    googleId: String, email: String, name: String, picture: String, credits: { type: Number, default: 3 }
+    googleId: String, email: String, name: String, picture: String, credits: { type: Number, default: 5 }
 });
 const User = mongoose.model('User', UserSchema);
 
@@ -52,7 +52,7 @@ app.post('/api/auth/google', async (req, res) => {
         const payload = ticket.getPayload();
         let user = await User.findOne({ googleId: payload.sub });
         if (!user) {
-            user = new User({ googleId: payload.sub, email: payload.email, name: payload.name, picture: payload.picture, credits: 3 });
+            user = new User({ googleId: payload.sub, email: payload.email, name: payload.name, picture: payload.picture, credits: 5 });
             await user.save();
         }
         const sessionToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -124,3 +124,4 @@ app.get('/download/:filename', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server Audio Slicer pornit stabil pe portul ${PORT}`);
 });
+
