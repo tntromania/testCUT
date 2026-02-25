@@ -2,16 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegStatic = require('ffmpeg-static'); // <--- Aici incarcam ultima versiune de FFmpeg
+const ffmpeg = require('fluent-ffmpeg'); // Folosim versiunea nativă a serverului tău (stabila!)
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
-
-// <--- Aici FORȚĂM sistemul să folosească versiunea nouă descarcată de NPM, ignorând versiunea veche a serverului Linux
-ffmpeg.setFfmpegPath(ffmpegStatic);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -70,7 +66,7 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
 });
 
 // ==========================================
-// RUTA DE PROCESARE AUDIO (FFMPEG LATEST & HUMAN-LIKE CUT)
+// RUTA DE PROCESARE AUDIO (GLITCH-FREE & HUMAN CUT)
 // ==========================================
 app.post('/api/smart-cut', authenticate, upload.single('file'), async (req, res) => {
     try {
@@ -84,12 +80,14 @@ app.post('/api/smart-cut', authenticate, upload.single('file'), async (req, res)
         const inputFile = req.file.path;
         const outputFile = path.join(processedDir, `cut_${Date.now()}.mp3`);
         
-        // Pragul decibelilor si durata de liniste (default daca nu trimiti din front)
-        const threshold = req.body.threshold || '-30dB'; 
-        const minSilence = req.body.minSilence || '0.3';
+        // SECRETUL AUDIO PRO: 
+        // Suprascriem pragul la -45dB ca sa nu mai manance din literele de la finalul cuvintelor
+        // Si setam minSilence la 0.35 secunde pentru o tranzitie perfecta
+        const threshold = '-45dB'; 
+        const minSilence = req.body.minSilence || '0.35'; 
 
-        // Algoritm FFmpeg "Human-like" (Folosind versiunea LATEST cu leave_silence)
-        const audioFilter = `silenceremove=start_periods=1:start_duration=0.1:start_threshold=${threshold}:stop_periods=-1:stop_duration=${minSilence}:stop_threshold=${threshold}:leave_silence=0.1`;
+        // Algoritm nativ super-stabil (suportat de orice versiune FFmpeg)
+        const audioFilter = `silenceremove=start_periods=1:start_duration=0.1:start_threshold=${threshold}:stop_periods=-1:stop_duration=${minSilence}:stop_threshold=${threshold}`;
 
         ffmpeg(inputFile)
             .audioFilters(audioFilter)
@@ -107,7 +105,7 @@ app.post('/api/smart-cut', authenticate, upload.single('file'), async (req, res)
             })
             .on('error', (err) => {
                 console.error("Eroare FFmpeg Audio:", err);
-                res.status(500).json({ error: 'Eroare la procesarea audio. Verifică setările.' });
+                res.status(500).json({ error: 'Eroare la procesarea audio.' });
                 if (fs.existsSync(inputFile)) fs.unlinkSync(inputFile);
             })
             .save(outputFile);
@@ -117,12 +115,12 @@ app.post('/api/smart-cut', authenticate, upload.single('file'), async (req, res)
     }
 });
 
-// Endpoint Download separat
+// Endpoint Download
 app.get('/download/:filename', (req, res) => {
     const file = path.join(processedDir, req.params.filename);
     if (fs.existsSync(file)) res.download(file); else res.status(404).send('Expirat.');
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server Audio Slicer pornit pe portul ${PORT} cu ultima versiune de FFmpeg`);
+    console.log(`🚀 Server Audio Slicer pornit stabil pe portul ${PORT}`);
 });
