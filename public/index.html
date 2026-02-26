@@ -41,7 +41,7 @@
     
     <div class="sticky top-0 z-50 flex w-full justify-center px-2 py-4 md:p-2 max-w-screen-2xl mx-auto">
         <nav class="w-full rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-xl md:mx-12 shadow-sm px-5 md:px-8 py-3 flex justify-between items-center">
-            <a class="flex items-center font-black text-2xl tracking-tight text-slate-900" href="https://creatorsmart.ro">
+            <a class="flex items-center font-black text-2xl tracking-tight text-slate-900" href="https://viralio.ro">
                 <div class="w-9 h-9 rounded-xl bg-gradient-viralio flex items-center justify-center text-white mr-2.5 shadow-md"><i class="fa-solid fa-bolt"></i></div>
                 Viralio <span class="text-sm font-medium text-slate-400 ml-2 border-l border-slate-200 pl-2">Audio Slicer</span>
             </a>
@@ -185,10 +185,10 @@
     function openLoginModal() { loginModal.classList.add('show'); }
     function closeLoginModal() { loginModal.classList.remove('show'); }
 
-    // Salveaza cookie pentru TOT domeniul creatorsmart.ro
-    function setToken(token) { document.cookie = "viralio_token=" + token + "; domain=.creatorsmart.ro; path=/; max-age=604800; Secure; SameSite=Lax"; }
+    // Salveaza cookie pentru TOT domeniul viralio.ro
+    function setToken(token) { document.cookie = "viralio_token=" + token + "; domain=.viralio.ro; path=/; max-age=604800; Secure; SameSite=Lax"; }
     function getToken() { const match = document.cookie.match(/(?:^|; )viralio_token=([^;]*)/); return match ? match[1] : null; }
-    function removeToken() { document.cookie = "viralio_token=; domain=.creatorsmart.ro; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"; }
+    function removeToken() { document.cookie = "viralio_token=; domain=.viralio.ro; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"; }
 
     // Trimitem login-ul la propriul server (care e conectat la DB)
     window.handleCredentialResponse = async function(response) {
