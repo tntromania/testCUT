@@ -60,8 +60,15 @@ app.post('/api/auth/google', async (req, res) => {
         const ticket = await googleClient.verifyIdToken({ idToken: req.body.credential, audience: process.env.GOOGLE_CLIENT_ID });
         const payload = ticket.getPayload();
         let user = await User.findOne({ googleId: payload.sub });
-        if (!user) {
-            user = new User({ googleId: payload.sub, email: payload.email, name: payload.name, picture: payload.picture, credits: 5 });
+if (!user) {
+            user = new User({ 
+                googleId: payload.sub, 
+                email: payload.email, 
+                name: payload.name, 
+                picture: payload.picture, 
+                credits: 10,             // Sincronizat cu HUB
+                voice_characters: 3000   // Sincronizat cu HUB
+            });
             await user.save();
         }
         const sessionToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -133,5 +140,6 @@ app.get('/download/:filename', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server Audio Slicer pornit stabil pe portul ${PORT}`);
 });
+
 
 
