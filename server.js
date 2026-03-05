@@ -30,10 +30,19 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('✅ Audiocut s-a conectat la MongoDB!'))
     .catch(err => console.error('❌ Eroare MongoDB:', err));
 
+// 1. Schema unică, completă și identică pe toate aplicațiile
 const UserSchema = new mongoose.Schema({
-    googleId: String, email: String, name: String, picture: String, credits: { type: Number, default: 5 }
+    googleId: { type: String, required: true, unique: true },
+    email: { type: String, required: true },
+    name: String,
+    picture: String,
+    credits: { type: Number, default: 10 }, // Universal: 10 credite
+    voice_characters: { type: Number, default: 3000 }, // Universal: 3000 caractere
+    createdAt: { type: Date, default: Date.now }
 });
-const User = mongoose.model('User', UserSchema);
+
+// 2. Crearea modelului (Atenție la o eroare comună în Mongoose unde re-definirea aruncă eroare)
+const User = mongoose.models.User || mongoose.model('User', UserSchema);
 
 const authenticate = (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
@@ -124,4 +133,5 @@ app.get('/download/:filename', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server Audio Slicer pornit stabil pe portul ${PORT}`);
 });
+
 
