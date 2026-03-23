@@ -87,9 +87,9 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
 app.post('/api/smart-cut', authenticate, upload.single('file'), async (req, res) => {
     try {
         const user = await User.findById(req.userId);
-        if (user.credits < 1) {
+        if (user.credits < 0.5) {
             if (req.file) fs.unlinkSync(req.file.path);
-            return res.status(403).json({ error: "Cost: 1 Credit. Fonduri insuficiente." });
+            return res.status(403).json({ error: "Cost: 0.5 Credite. Fonduri insuficiente." });
         }
         if (!req.file) return res.status(400).json({ error: 'Fisier lipsa' });
 
@@ -108,7 +108,7 @@ app.post('/api/smart-cut', authenticate, upload.single('file'), async (req, res)
         ffmpeg(inputFile)
             .audioFilters(audioFilter)
             .on('end', async () => {
-                user.credits -= 1;
+                user.credits -= 0.5;
                 await user.save();
                 
                 res.json({ 
