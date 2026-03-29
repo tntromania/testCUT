@@ -2,17 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const ffmpeg = require('fluent-ffmpeg'); // Folosim versiunea nativă a serverului tău (stabila!)
+const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const fs = require('fs');
-const mongoose = require('mongoose');
-const { OAuth2Client } = require('google-auth-library');
-const jwt = require('jsonwebtoken');
+
+// ✅ Auth centralizat prin HUB
+const { authenticate, hubAPI } = require('./hub-auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 app.use(cors({ origin: '*' }));
 app.use(express.json());
@@ -25,69 +23,35 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 if (!fs.existsSync(processedDir)) fs.mkdirSync(processedDir);
 const upload = multer({ dest: uploadDir + '/' });
 
-// CONECTARE BAZA DE DATE CENTRALA
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('✅ Audiocut s-a conectat la MongoDB!'))
-    .catch(err => console.error('❌ Eroare MongoDB:', err));
-
-// 1. Schema unică, completă și identică pe toate aplicațiile
-const UserSchema = new mongoose.Schema({
-    googleId: { type: String, required: true, unique: true },
-    email: { type: String, required: true },
-    name: String,
-    picture: String,
-    credits: { type: Number, default: 10 }, // Universal: 10 credite
-    voice_characters: { type: Number, default: 3000 }, // Universal: 3000 caractere
-    createdAt: { type: Date, default: Date.now }
-});
-
-// 2. Crearea modelului (Atenție la o eroare comună în Mongoose unde re-definirea aruncă eroare)
-const User = mongoose.models.User || mongoose.model('User', UserSchema);
-
-const authenticate = (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: "Trebuie să fii logat!" });
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.userId = decoded.userId;
-        next();
-    } catch (e) { return res.status(401).json({ error: "Sesiune expirată." }); }
-};
-
-// RUTE AUTH
+// ══════════════════════════════════════════════════════════════
+// ██ AUTH ROUTES — proxy către HUB
+// ══════════════════════════════════════════════════════════════
 app.post('/api/auth/google', async (req, res) => {
     try {
-        const ticket = await googleClient.verifyIdToken({ idToken: req.body.credential, audience: process.env.GOOGLE_CLIENT_ID });
-        const payload = ticket.getPayload();
-        let user = await User.findOne({ googleId: payload.sub });
-if (!user) {
-            user = new User({ 
-                googleId: payload.sub, 
-                email: payload.email, 
-                name: payload.name, 
-                picture: payload.picture, 
-                credits: 10,             // Sincronizat cu HUB
-                voice_characters: 3000   // Sincronizat cu HUB
-            });
-            await user.save();
-        }
-        const sessionToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.json({ token: sessionToken, user: { name: user.name, picture: user.picture, credits: user.credits } });
-    } catch (error) { res.status(400).json({ error: "Eroare Google" }); }
+        const response = await fetch(`${process.env.HUB_URL}/api/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(req.body),
+        });
+        const data = await response.json();
+        res.status(response.status).json(data);
+    } catch (e) {
+        res.status(500).json({ error: 'Nu pot comunica cu serverul principal.' });
+    }
 });
 
 app.get('/api/auth/me', authenticate, async (req, res) => {
-    const user = await User.findById(req.userId);
-    res.json({ user: { name: user.name, picture: user.picture, credits: user.credits } });
+    res.json({ user: req.user });
 });
 
-// ==========================================
-// RUTA DE PROCESARE AUDIO (GLITCH-FREE & HUMAN CUT)
-// ==========================================
+// ══════════════════════════════════════════════════════════════
+// ██ PROCESARE AUDIO (SMART CUT)
+// ══════════════════════════════════════════════════════════════
 app.post('/api/smart-cut', authenticate, upload.single('file'), async (req, res) => {
     try {
-        const user = await User.findById(req.userId);
-        if (user.credits < 0.5) {
+        // Verificăm creditele prin HUB
+        const balance = await hubAPI.checkCredits(req.userId);
+        if (balance.credits < 0.5) {
             if (req.file) fs.unlinkSync(req.file.path);
             return res.status(403).json({ error: "Cost: 0.5 Credite. Fonduri insuficiente." });
         }
@@ -95,28 +59,31 @@ app.post('/api/smart-cut', authenticate, upload.single('file'), async (req, res)
 
         const inputFile = req.file.path;
         const outputFile = path.join(processedDir, `cut_${Date.now()}.mp3`);
-        
-        // SECRETUL AUDIO PRO: 
-        // Suprascriem pragul la -45dB ca sa nu mai manance din literele de la finalul cuvintelor
-        // Si setam minSilence la 0.35 secunde pentru o tranzitie perfecta
-        const threshold = '-45dB'; 
-        const minSilence = req.body.minSilence || '0.35'; 
 
-        // Algoritm nativ super-stabil (suportat de orice versiune FFmpeg)
+        const threshold = '-45dB';
+        const minSilence = req.body.minSilence || '0.35';
+
         const audioFilter = `silenceremove=start_periods=1:start_duration=0.1:start_threshold=${threshold}:stop_periods=-1:stop_duration=${minSilence}:stop_threshold=${threshold}`;
 
         ffmpeg(inputFile)
             .audioFilters(audioFilter)
             .on('end', async () => {
-                user.credits -= 0.5;
-                await user.save();
-                
-                res.json({ 
-                    status: 'ok', 
-                    downloadUrl: `/download/${path.basename(outputFile)}`,
-                    creditsLeft: user.credits
-                });
-                
+                // Scădem creditele prin HUB (atomic)
+                try {
+                    const result = await hubAPI.useCredits(req.userId, 0.5);
+                    res.json({
+                        status: 'ok',
+                        downloadUrl: `/download/${path.basename(outputFile)}`,
+                        creditsLeft: result.credits
+                    });
+                } catch (e) {
+                    res.json({
+                        status: 'ok',
+                        downloadUrl: `/download/${path.basename(outputFile)}`,
+                        creditsLeft: 0
+                    });
+                }
+
                 if (fs.existsSync(inputFile)) fs.unlinkSync(inputFile);
             })
             .on('error', (err) => {
@@ -140,6 +107,3 @@ app.get('/download/:filename', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server Audio Slicer pornit stabil pe portul ${PORT}`);
 });
-
-
-
