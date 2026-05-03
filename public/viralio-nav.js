@@ -11,7 +11,7 @@
   // ── App Registry ──────────────────────────────────────────────
   const APPS = [
     {
-      key: 'video', name: 'Video', url: 'https://video.viralio.ro',
+      key: 'video', name: 'Video', url: 'https://downloader.viralio.ro/',
       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="15" height="13" rx="2"/><polygon points="17 8 22 5 22 19 17 16"/></svg>`
     },
     {
