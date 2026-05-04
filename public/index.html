@@ -208,16 +208,19 @@
         }
     }
 
-    // ─── REFACTOR: Folosim ViralioNav API in loc sa manipulam DOM-ul direct ───
-    function updateUI(user) {
-        if (window.ViralioNav) {
-            window.ViralioNav.setUser({
-                name: user.name.split(' ')[0],
-                avatar: user.picture,
-                credits: user.credits
-            });
-        }
+function updateUI(user) {
+    if (window.ViralioNav) {
+        window.ViralioNav.setUser({
+            name:             user.name,
+            email:            user.email,
+            avatar:           user.picture,
+            credits:          user.credits,
+            voice_characters: user.voice_characters,
+            plan:             user.subscriptionPlan,
+            status:           user.subscriptionStatus,
+        });
     }
+}
 
     function logout() { 
         removeToken(); 
